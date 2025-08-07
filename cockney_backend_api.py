@@ -28,6 +28,11 @@ def get_slang():
 def get_slang_variants():
     return jsonify(cockney_variants)
 
+    @app.route("/api/slang_index")
+def get_slang_index():
+    with open("cockney_slang_index.json") as f:
+        return jsonify(json.load(f))
+
 @app.route("/health")
 def health():
     return {"ok": True, "entries": len(cockney_dict), "variants": len(cockney_variants)}
