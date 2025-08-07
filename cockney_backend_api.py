@@ -1,7 +1,9 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import json
 
 app = Flask(__name__)
+CORS(app)
 
 # Load the slang dictionary
 with open("cockney_slang.json", "r") as f:
