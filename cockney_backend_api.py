@@ -1,42 +1,56 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-import json
+import json, os
 
 app = Flask(__name__)
-# Allow your domains (add both naked + www)
-CORS(app, resources={
-    r"/api/*": {"origins": ["https://bencockney.rocks", "https://www.bencockney.rocks"]}
-})
-# For quick testing you can do: CORS(app)  # but tighten later
 
-# Load base map
-with open("cockney_slang.json", "r") as f:
-    cockney_dict = json.load(f)
+# Allow your domains (naked + www)
+CORS(
+    app,
+    resources={r"/api/*": {"origins": ["https://bencockney.rocks", "https://www.bencockney.rocks"]}},
+)
 
-# Try to load variants if you built them
-try:
-    with open("cockney_slang_variants.json", "r") as f:
-        cockney_variants = json.load(f)
-except FileNotFoundError:
-    cockney_variants = {k: [v] for k, v in cockney_dict.items()}
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-@app.route("/api/slang")
-def get_slang():
-    return jsonify(cockney_dict)
+def load_json(filename):
+    path = os.path.join(BASE_DIR, filename)
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+@app.route("/api/slang_base")
+def slang_base():
+    return jsonify(load_json("cockney_slang.json"))
+
+@app.route("/api/slang_index")
+def slang_index():
+    return jsonify(load_json("cockney_slang_index.json"))
 
 @app.route("/api/slang_variants")
-def get_slang_variants():
-    return jsonify(cockney_variants)
+def slang_variants():
+    # Always read the file fresh so updates are picked up without a restart
+    return jsonify(load_json("cockney_slang_variants.json"))
 
-    @app.route("/api/slang_index")
-def get_slang_index():
-    with open("cockney_slang_index.json") as f:
-        return jsonify(json.load(f))
+@app.after_request
+def add_no_cache_headers(resp):
+    # Prevent stale JSON in browsers/CDNs
+    if request.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/health")
 def health():
-    return {"ok": True, "entries": len(cockney_dict), "variants": len(cockney_variants)}
-
+    base = load_json("cockney_slang.json")
+    variants = load_json("cockney_slang_variants.json")
+    index = load_json("cockney_slang_index.json")
+    return {
+        "ok": True,
+        "entries": len(base),
+        "variants": len(variants),
+        "index": len(index),
+    }
 
 if __name__ == "__main__":
+    # Render uses the startCommand; this block is for local dev
     app.run(debug=True, host="0.0.0.0", port=5000)
