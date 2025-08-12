@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 import json, os
 
@@ -17,6 +17,14 @@ def load_json(filename):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+@app.route("/api/slang_index")
+def slang_index():
+    data = load_json("cockney_slang_index.json")
+    resp = make_response(jsonify(data))
+    # keep your frontend's cache-buster, but also set headers here
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+    
 @app.route("/api/slang_base")
 def slang_base():
     return jsonify(load_json("cockney_slang.json"))
